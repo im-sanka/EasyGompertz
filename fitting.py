@@ -137,4 +137,4 @@ y_axis_name = col2.text_input("Name for Y-axis", "Y-axis label")
 if st.button('Plot and fit!'):
     initial_params = (a_guess, b_guess, c_guess)
     fig = plot_gompertz(datasets, x_axis_name, y_axis_name, fit_names, initial_params)
-    st.plotly_chart(fig)
+    st.plotly_chart(fig, use_container_width=True)
