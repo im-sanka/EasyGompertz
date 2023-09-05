@@ -112,8 +112,8 @@ for i in range(num_datasets):
 
         datasets.append({'x': x_values, 'y': y_values, 'dataset_name': dataset_name})
     else:
-        x_values = col1.text_input(f'Enter x values for {dataset_name} (comma-separated):')
-        y_values = col2.text_input(f'Enter y values for {dataset_name} (comma-separated):')
+        x_values = col1.text_input(f'Enter x values for {dataset_name} (comma-separated with no space e.g. 0.1,0.2,0.3):')
+        y_values = col2.text_input(f'Enter y values for {dataset_name} (comma-separated with no space e.g. 0.05,0.15,0.30):')
 
         try:
             x_values = [float(x) for x in x_values.split(',')] if x_values else []
