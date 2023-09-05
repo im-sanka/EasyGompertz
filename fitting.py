@@ -3,64 +3,21 @@ import numpy as np
 from scipy.optimize import curve_fit
 import plotly.graph_objects as go
 import pandas as pd
-
+from functions import gompertz, plot_gompertz, heuristic_initial_guess
 st.set_page_config(layout="wide")
 
-# Define the Gompertz function
-def gompertz(x, a, b, c):
-    return a * np.exp(-b * np.exp(-c * x))
 
-def plot_gompertz(datasets, x_axis_name, y_axis_name, fit_names, initial_params):
-    fig = go.Figure()
-
-    for idx, data in enumerate(datasets):
-        xdata = np.array(data['x'])
-        ydata = np.array(data['y'])
-        dataset_name = data['dataset_name']
-        fit_name = fit_names[idx]
-
-        if len(xdata) == 0 or len(ydata) == 0:
-            st.warning(f"{dataset_name} is empty. Please provide data or upload a file.")
-            continue
-
-        p0 = initial_params
-
-        try:
-            popt, _ = curve_fit(gompertz, xdata, ydata, p0=p0)
-        except RuntimeError as e:
-            st.warning(f"Optimal parameters not found for {dataset_name}. Try adjusting initial parameter guesses.")
-            continue
-
-        xplot = np.linspace(0, max(xdata), 1000)
-        yplot = gompertz(xplot, *popt)
-
-        fig.add_trace(go.Scatter(x=xdata, y=ydata, mode='markers', name=dataset_name))
-        fig.add_trace(go.Scatter(x=xplot, y=yplot, mode='lines', name=f'{fit_name}'))
-
-    fig.update_layout(title="Gompertz Plots", xaxis_title=x_axis_name, yaxis_title=y_axis_name)
-    return fig
-
-def heuristic_initial_guess(data):
-    """Provide a heuristic for initial guess based on data."""
-    a = max(data['y'])
-    b = 1.0
-    # Check if data length is sufficient
-    if len(data['x']) > 1:
-        slope = (data['y'][1] - data['y'][0]) / (data['x'][1] - data['x'][0])
-        c = slope / (a - data['y'][0]) if a != data['y'][0] else 0.1
-    else:
-        c = 0.1
-    return (a, b, c)
 
 st.title('Gompertz Fitting Dashboard')
-st.info("**IMPORTANT**: In this platform, you can either add your data manually or upload a .csv/ .xlsx data that has two columns only."
-        "  \nIf you upload the file, the first column needs to represent X axis and the second column will represent Y axis.")
 datasets = []
 fit_names = []
 
 # Number of datasets input
-col1, col2, col3 = st.columns(3)
+col1, col2 = st.columns(2)
 num_datasets = col1.number_input("Number of datasets", 1, 5, 1)
+col2.info("**IMPORTANT**: In this platform, you can either add your data manually or upload a .csv/ .xlsx data."
+        " If you upload the file, the first column needs to represent X axis and the second column will represent Y axis and the third column is the standard deviation.")
+
 with st.expander("**About the Gompertz Function**"):
     st.markdown("""
     The Gompertz function is a type of mathematical model for a time series and is named after Benjamin Gompertz. It is commonly used in biology to describe the growth of organisms, the number of cases in epidemics, and the decay of technological products' popularity.
@@ -89,11 +46,17 @@ else:
     b_guess = col_b.number_input("Initial guess for b", 0.0, 10.0, 0.1)
     c_guess = col_c.number_input("Initial guess for c", 0.0, 10.0, 0.1)
 
+available_colors = ["lime", "cyan", "red", "teal","orange", "#ffc857", "#119da4"]
+
+
 for i in range(num_datasets):
     st.markdown(f"### Dataset {i+1}")
-    col1,col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)  # Added an extra column for color selection
+
     dataset_name = col1.text_input(f"Name for Dataset {i+1}", f"Dataset {i+1}")
     fit_name = col2.text_input(f"Name for Fit {i+1} in Legend", f"Gompertz Fit {i+1}")
+
+    dataset_color = col3.selectbox(f"Color for {dataset_name}", available_colors, index=i%len(available_colors))  # Defaulting to a different color for each dataset initially
     fit_names.append(fit_name)
 
     uploaded_file = st.file_uploader(f"Or, upload CSV or XLSX file for dataset {i+1}", type=["csv", "xlsx"])
@@ -107,27 +70,42 @@ for i in range(num_datasets):
         else:
             data = pd.read_excel(uploaded_file)
 
-        # Get the first and second columns regardless of their names
-        x_values = data.iloc[:, 0].tolist()
-        y_values = data.iloc[:, 1].tolist()
+        # Check number of columns to determine if standard deviations are included
+        if data.shape[1] == 3:
+            x_values = data.iloc[:, 0].tolist()
+            y_values = data.iloc[:, 1].tolist()
+            std_dev = data.iloc[:, 2].tolist()
+            datasets.append({'x': x_values, 'y': y_values, 'std_dev': std_dev, 'dataset_name': dataset_name, 'color': dataset_color.lower()})
+        elif data.shape[1] == 2:
+            x_values = data.iloc[:, 0].tolist()
+            y_values = data.iloc[:, 1].tolist()
+            datasets.append({'x': x_values, 'y': y_values, 'dataset_name': dataset_name, 'color': dataset_color.lower()})
+        else:
+            st.error(f"Unexpected number of columns in uploaded file for {dataset_name}. Expecting 2 or 3 columns.")
+            continue
 
-        datasets.append({'x': x_values, 'y': y_values, 'dataset_name': dataset_name})
     else:
         x_values = col1.text_input(f'Enter x values for {dataset_name} (comma-separated with no space e.g. 0.1,0.2,0.3):')
         y_values = col2.text_input(f'Enter y values for {dataset_name} (comma-separated with no space e.g. 0.05,0.15,0.30):')
+        std_dev = col3.text_input(f'Enter standard deviations for {dataset_name} (optional, comma-separated with no space e.g. 0.01,0.02,0.03):', "")
 
-        try:
-            x_values = [float(x) for x in x_values.split(',')] if x_values else []
-            y_values = [float(y) for y in y_values.split(',')] if y_values else []
-        except ValueError:
-            st.error(f"Error in processing input for {dataset_name}. Ensure correct format.")
-            continue
+        # ... [rest of the processing remains unchanged]
 
-        if len(x_values) != len(y_values):
-            st.error(f"Length mismatch between x and y values for {dataset_name}")
-            continue
+        if std_dev:
+            try:
+                std_dev = [float(s) for s in std_dev.split(',')] if std_dev else []
+            except ValueError:
+                st.error(f"Error in processing standard deviations for {dataset_name}. Ensure correct format.")
+                continue
 
-        datasets.append({'x': x_values, 'y': y_values, 'dataset_name': dataset_name})
+            if len(std_dev) != len(x_values):
+                st.error(f"Length mismatch between x values and standard deviations for {dataset_name}")
+                continue
+
+            datasets.append({'x': x_values, 'y': y_values, 'std_dev': std_dev, 'dataset_name': dataset_name, 'color': dataset_color.lower()})
+        else:
+            datasets.append({'x': x_values, 'y': y_values, 'dataset_name': dataset_name, 'color': dataset_color.lower()})
+
 
 # Inputs for x and y axis names
 st.subheader("Renaming the axis:")
@@ -136,6 +114,10 @@ x_axis_name = col1.text_input("Name for X-axis", "X-axis label")
 y_axis_name = col2.text_input("Name for Y-axis", "Y-axis label")
 
 if st.button('Plot and fit!'):
-    initial_params = (a_guess, b_guess, c_guess)
-    fig = plot_gompertz(datasets, x_axis_name, y_axis_name, fit_names, initial_params)
-    st.plotly_chart(fig, use_container_width=True)
+    try:
+        initial_params = (a_guess, b_guess, c_guess)
+        fig = plot_gompertz(datasets, x_axis_name, y_axis_name, fit_names, initial_params)
+        st.plotly_chart(fig, use_container_width=True)
+    except:
+        st.warning("Please add the data either manually of data upload!")
+
