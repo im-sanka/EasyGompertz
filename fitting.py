@@ -4,9 +4,8 @@ from scipy.optimize import curve_fit
 import plotly.graph_objects as go
 import pandas as pd
 from functions import gompertz, plot_gompertz, heuristic_initial_guess
-st.set_page_config(layout="wide")
 
-
+st.set_page_config(page_title="EasyGompertz", page_icon=":chart_with_downwards_trend:",layout="wide")
 
 st.title('Gompertz Fitting Dashboard')
 datasets = []
