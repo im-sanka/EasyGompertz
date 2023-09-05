@@ -53,7 +53,8 @@ def heuristic_initial_guess(data):
     return (a, b, c)
 
 st.title('Gompertz Fitting Dashboard')
-st.info("**IMPORTANT**: In this platform, you can either add your data manually or upload a .csv/ .xlsx data that has two columns only - the first column is representing X axis and the second column will be added as Y axis.")
+st.info("**IMPORTANT**: In this platform, you can either add your data manually or upload a .csv/ .xlsx data that has two columns only."
+        "\nIf you upload the file, the first column needs to represent X axis and the second column will represent Y axis.")
 datasets = []
 fit_names = []
 
