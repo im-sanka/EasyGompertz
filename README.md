@@ -5,7 +5,7 @@ Basically, this is a dashboard that can host data from EasyFlow that is meant to
 
 Wanna test the fitting dashboard? 
 
-Check here: [easygompertz.streamlit.app](easygompertz.streamlit.app)
+Check here: [easygompertz.streamlit.app](https://easygompertz.streamlit.app)
 
 If you need more explanation regarding this, please check [this wiki article here](https://en.wikipedia.org/wiki/Gompertz_function).
 
